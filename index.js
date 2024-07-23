@@ -1,6 +1,5 @@
 const inquirer = require('inquirer');
 const db = require('./db');
-const { validateHeaderName } = require('http');
 
 const mainMenu = () => {
     inquirer.prompt({
@@ -48,7 +47,7 @@ const mainMenu = () => {
 }; 
 
 const viewAllDepartments = () => {
-    db.query('SELECT * FROM departments', (err, res) => {
+    db.query('SELECT * FROM department', (err, res) => {
         if (err) throw err;
         console.table(res.rows);
         mainMenu();
@@ -56,9 +55,9 @@ const viewAllDepartments = () => {
 };
 
 const viewAllRoles = () => {
-    const query = `SELECT roles.id, roles.title, roles.salary, departments.name AS department
-    FROM roles
-    LEFT JOIN departments ON roles.department_id = departments.id`;
+    const query = `SELECT role.id, role.title, role.salary, department.name AS department
+    FROM role
+    LEFT JOIN department ON role.department_id = department.id`;
     db.query(query, (err, res) => {
         if (err) throw err;
         console.table(res.rows);
@@ -67,12 +66,12 @@ const viewAllRoles = () => {
 };
 
 const viewAllEmployees = () => {
-    const query = `SELECT employees.first_name, employees.last_name, roles.title, departments.name AS department, roles.salary,
+    const query = `SELECT employee.first_name, employee.last_name, role.title, department.name AS department, role.salary,
     CONCAT(manager.first_name, ' ', manager.last_name) AS manager
-    FROM employees
-    LEFT JOIN roles ON employees.role_id = roles.id
-    LEFT JOIN departments on roles.department_id = departments.id
-    LEFT JOIN employees manager ON manager.id = employee.manager_id`;
+    FROM employee
+    LEFT JOIN role ON employee.role_id = role.id
+    LEFT JOIN department on role.department_id = department.id
+    LEFT JOIN employee manager ON manager.id = employee.manager_id`;
     db.query(query, (err, res) => {
         if (err) throw err;
         console.table(res.rows);
@@ -86,7 +85,7 @@ const addDepartment = () => {
         type: 'input',
         message: 'Enter the name of the department:'
     }).then(answer => {
-        db.query('INSERT INTO departments (name) VALUES ($1)', [answer.name], (err, res) => {
+        db.query('INSERT INTO department (name) VALUES ($1)', [answer.name], (err, res) => {
             if (err) throw err;
             console.log('Department added!');
             mainMenu();
@@ -95,7 +94,7 @@ const addDepartment = () => {
 };
 
 const addRole = () => {
-    db.query('SELECT * FROM departments', (err, res) =>{
+    db.query('SELECT * FROM department', (err, res) =>{
         if (err) throw err;
         const departments = res.rows.map(department => ({
             name: department.name,
@@ -119,7 +118,7 @@ const addRole = () => {
                 choices: departments
             }
         ]).then(answers => {
-            db.query('INSERT INTO roles (title, salary, department_id) VALUES ($1, $2, $3)',
+            db.query('INSERT INTO role (title, salary, department_id) VALUES ($1, $2, $3)',
                [answers.title, answers.salary, answers.department_id], (err, res) => {
                 if (err) throw err;
                 console.log('Role added!');
@@ -130,14 +129,14 @@ const addRole = () => {
 };
 
 const addEmployee = () => {
-    db.query('SELECT * FROM roles', (err, res) => {
+    db.query('SELECT * FROM role', (err, res) => {
         if (err) throw err;
         const roles = res.rows.map(role => ({
             name: role.title,
             value: role.id
         }));
 
-        db.query('SELECT * FROM employees', (err, res) => {
+        db.query('SELECT * FROM employee', (err, res) => {
             if (err) throw err;
             const managers = res.rows.map(employee => ({
                 name: `${employee.first_name} ${employee.last_name}`,
@@ -169,7 +168,7 @@ const addEmployee = () => {
                     choices: managers
                 }
             ]).then(answers => {
-                db.query('INSERT INTO employees (first_name, last_name, role_id, manager_id) VALUES ($1, $2, $3, $4)', 
+                db.query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ($1, $2, $3, $4)', 
                 [answers.first_name, answers.last_name, answers.role_id, answers.manager_id], (err, res) => {
                     if (err)throw err;
                     console.log('Employee added!');
@@ -181,13 +180,13 @@ const addEmployee = () => {
 };
 
 const updateEmployeeRole = () =>  {
-    db.query('SELECT * FROM  employees', (err,res) => {
+    db.query('SELECT * FROM employee', (err,res) => {
         if (err) throw err;
         const employees = res.rows.map(employee => ({
             name: `${employee.first_name} ${employee.last_name}`,
-            value: employee_id
+            value: employee.id
         }));
-        db.query('SELECT * FROM roles', (err, res) => {
+        db.query('SELECT * FROM role', (err, res) => {
             if (err) throw err;
             const roles = res.rows.map(role => ({
                 name: role.title,
@@ -207,7 +206,7 @@ const updateEmployeeRole = () =>  {
                 choices: roles
                 }
             ]).then(answers => {
-                db.query('UPDATE employees SET role_id = $1 WHERE id = $2', [answers.role_id, answers.employee_id], (err, res) => {
+                db.query('UPDATE employee SET role_id = $1 WHERE id = $2', [answers.role_id, answers.employee_id], (err, res) => {
                     if (err) throw err;
                     console.log('Employee role updated!');
                     mainMenu();
